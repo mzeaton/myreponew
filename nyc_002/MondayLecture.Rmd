@@ -1,0 +1,225 @@
+---
+title: "experiment3: More Airline Data"
+date: "2023-09-11"
+output: html_notebook
+---
+
+
+
+```{r}
+library(nycflights13)
+library(tidyverse)
+library(janitor)
+library(here)
+```
+
+
+
+# Get data from the online source.
+
+Save the download to your data_raw directory. It will be a zipfile, but that wil be okay. Change the name of the zip file to RawData.
+
+## Load the BOT data
+
+We take advantage of the here package to get the path to the file that we stored. We also ma note that inside the zipfile is a csv file. We will read the csvfile.
+
+```{r}
+thisfile=here("RawData","DL_SelectFields.zip")
+
+df2022=read_csv(thisfile) %>% clean_names()
+```
+
+## Subsetting to data of interest
+
+Let's focus on flights from La Guardia ("LGA") and eliminate cargo flights by requiring at least 1 passenger.
+
+Call the resultant dataframe 'df9'.
+
+```{r}
+df9 = df2022 |> filter(passengers>0,origin=="LGA")
+```
+
+# Exploring the BOT 2022 data
+
+## Subsetting to data of interest
+
+Lets try to visualize a monthly count of flights using a barchart.
+
+First, a not quite right visualization
+
+```{r}
+df9 |>
+  ggplot(aes(month)) + geom_bar()
+```
+By default, 'geom_bar' is counting the number of rows, where we have asked it to visualize the count by 'month'.
+
+** Take a look at the dataset and discover why counting rows is not going to give us a count of flights.**
+
+the visualization we want is:
+
+```{r}
+df9 |> ggplot(aes(month)) + geom_bar(aes(weight=departures_performed))
+```
+
+Make some observations of this plot.
+
+around the holidays (easter, thanksgiving, and christmas) the number of flights increased
+
+## A new visualization
+
+Can you make a boxplot where the bar height is based on the number of passengers riding each month.
+
+
+```{r}
+df9 |> ggplot(aes(month)) + geom_bar(aes(weight=passengers))
+```
+
+Observation:
+* low passenger numbers in early 2022 likely due to COVID, but the number of flights were still up.
+
+
+Here is a pretty but not so useful plot:
+
+```{r}
+df9 |>
+  ggplot(aes(month,fill=carrier_name)) + geom_bar(aes(weight=departures_performed))
+```
+
+## Arrivals and Departures from LGA
+
+```{r}
+df10 = df2022 |> filter(passengers>0,origin=="LGA" | dest=="LGA")
+
+df10 |> ggplot(aes(month)) + geom_bar(aes(weight=passengers))
+```
+
+
+```{r}
+df11=df10 |> select(month,passengers,seats,carrier_name,dest,origin)
+```
+
+
+```{r}
+df12 =df10 |> select(1:5, month,contains("id"))
+```
+
+
+```{r}
+df13 = df11 |> mutate(percent_loading = passengers/seats*100)
+
+df13 |> ggplot(aes(percent_loading)) + 
+  geom_histogram()+facet_wrap(~carrier_name,scales="free_y")
+```
+
+
+## Class work on Wednesday 9/13/23
+
+```{r}
+#2017
+
+thisfile=here("RawData", "BOT Airline Data-20230913","DL_SelectFields_2017.zip")
+
+df2017=read_csv(thisfile) %>% clean_names()
+
+#2018
+
+thisfile=here("RawData", "BOT Airline Data-20230913","DL_SelectFields_2018.zip")
+
+df2018=read_csv(thisfile) %>% clean_names()
+
+#2019
+
+thisfile=here("RawData", "BOT Airline Data-20230913","DL_SelectFields_2019.zip")
+
+df2019=read_csv(thisfile) %>% clean_names()
+
+#2020
+
+thisfile=here("RawData", "BOT Airline Data-20230913","DL_SelectFields_2020.zip")
+
+df2020=read_csv(thisfile) %>% clean_names()
+
+#2021
+
+thisfile=here("RawData", "BOT Airline Data-20230913","DL_SelectFields_2021.zip")
+
+df2021=read_csv(thisfile) %>% clean_names()
+
+#2022
+
+thisfile=here("RawData", "BOT Airline Data-20230913","DL_SelectFields_2022.zip")
+
+df2022=read_csv(thisfile) %>% clean_names()
+
+#2023
+
+thisfile=here("RawData", "BOT Airline Data-20230913","DL_SelectFields_2023.zip")
+
+df2023=read_csv(thisfile) %>% clean_names()
+```
+
+### combine dataframes
+
+
+```{r}
+dfc=df2017 |>
+  bind_rows(df2018) |>
+  bind_rows(df2019) |>
+  bind_rows(df2020) |>
+  bind_rows(df2021) |>
+  bind_rows(df2022) |>
+  bind_rows(df2023) 
+
+```
+
+
+### arrivals and departures from LGA
+
+```{r}
+dfc1=dfc |>
+  filter(passengers>0,origin=="LGA" | dest =="LGA")
+```
+
+
+
+
+```{r}
+dfc1|> 
+  ggplot(aes(month)) + 
+  geom_bar(aes(weight=passengers)) +
+  ggtitle("Total Passengers by Month over Multiyear Period")
+```
+
+
+```{r}
+dfc1 |>
+  mutate(month_year = year+month/12) |>
+  ggplot(aes(month_year)) +
+  geom_bar(aes(weight=passengers)) +
+  ggtitle("Total Passengers by Month over Multiyear Period")
+```
+
+
+```{r}
+dfc1 |> ggplot(aes(year)) +
+  geom_bar(aes(weight=passengers)) +
+  ggtitle("total passengers by year over multiyear period")
+```
+
+### Question - do more folks travel *LGA to MIA* or *MIA to LGA*
+
+
+```{r}
+dfc2=dfc1 |>
+  filter(passengers>0, origin=="MIA" |dest == "MIA")
+
+dfc2|> 
+  mutate(month_year = year+month/12) |>
+  ggplot(aes(month_year)) +
+  geom_bar(aes(weight=passengers, color = origin), position = "dodge") +
+  ggtitle("Total Passengers by Month over Multiyear Period")
+```
+
+### the bs homework of the day  -  try to break it down by years, represent different visualizations, 
+
+
